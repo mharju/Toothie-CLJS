@@ -18,7 +18,7 @@
     [view {:style {:flex 1 :flex-direction "column" :align-items "center" :justify-content :center :background-color @section-color}}
        [text {:style {:font-size 80 :font-weight "100" :margin-bottom 20 :text-align "center"}}
          (str @stopwatch)]
-       [text {:style {:font-size 30 :font-weight "300" :margin-bottom 20 :text-align "center"}}
+       [text {:style {:font-size 30 :font-weight "600" :margin-bottom 20 :text-align "center"}}
          (str @section)]]))
 
 (defn init []
