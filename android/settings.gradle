@@ -1,0 +1,3 @@
+rootProject.name = 'toothie'
+
+include ':app'
