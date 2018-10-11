@@ -23,5 +23,10 @@
 
 (defn init []
   (re/dispatch-sync [::events/initialize-db])
-  (.addEventListener app-state "change" (fn [] (re/dispatch [::events/initialize-db])))
+  (.addEventListener app-state "change" (fn [next-app-state]
+                                          (println "Next app state" next-app-state)
+                                          (case next-app-state
+                                            "active" (re/dispatch [::events/initialize-db])
+                                            "background" (re/dispatch [::events/stop])
+                                            nil)))
   (.registerComponent app-registry "toothie" #(r/reactify-component app-root)))

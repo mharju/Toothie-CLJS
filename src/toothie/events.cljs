@@ -4,6 +4,9 @@
    [clojure.spec.alpha :as s]
    [toothie.db :as db :refer [app-db]]))
 
+(def ReactNative (js/require "react-native"))
+(def Vibration (.-Vibration ReactNative))
+
 ;; -- Interceptors ------------------------------------------------------------
 ;;
 ;; See https://github.com/Day8/re-frame/blob/master/docs/Interceptors.md
@@ -24,7 +27,12 @@
 
 (re/reg-fx ::timer-tick
   (fn []
-    (js/setTimeout #(re/dispatch [::tick]) 1000)))
+    (let [delta (- 1000 (.getMilliseconds (js/Date.)))]
+      (js/setTimeout #(re/dispatch [::tick]) delta))))
+
+(re/reg-fx ::vibrate
+  (fn []
+    (.vibrate Vibration)))
 
 ;; -- Handlers --------------------------------------------------------------
 
@@ -38,9 +46,14 @@
   validate-spec
   (fn [{:keys [db]}]
     (let [{:keys [current-time start-time]} db
-          diff (/ (- (.getTime current-time) (.getTime start-time)) 1000)
-          should-continue? (< diff 119)]
+          diff (js/Math.round (/ (- (.getTime current-time) (.getTime start-time)) 1000))
+          should-continue? (and (not (get db :stop false)) (< diff 120))
+          should-vibrate? (and (zero? (mod diff 30)) (> diff 0))]
       (merge
         {:db (assoc db :current-time (js/Date.))}
-        (when should-continue?
-           { ::timer-tick nil})))))
+        (when should-vibrate?  {::vibrate nil})
+        (when should-continue? {::timer-tick nil})))))
+
+(re/reg-event-db ::stop
+  (fn [db]
+    (assoc db :stop true)))
