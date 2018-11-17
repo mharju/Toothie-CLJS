@@ -26,12 +26,18 @@
 ;; -- Effects --------------------------------------------------------------
 
 (re/reg-fx ::timer-tick
-  (fn []
-    (let [delta (- 1000 (.getMilliseconds (js/Date.)))]
-      (js/setTimeout #(re/dispatch [::tick]) delta))))
+  (fn [start-time]
+    (let [start-ms   (.getMilliseconds start-time)
+          current-ms (.getMilliseconds (js/Date.))
+          ;; If we have drifted to the next second
+          current-ms (if (< current-ms start-ms) (+ 1000 current-ms) current-ms)
+          sleep-time (+ 1000 (- start-ms current-ms))]
+      ;; start 983 => current 902
+      (js/setTimeout #(re/dispatch [::tick]) sleep-time))))
 
 (re/reg-fx ::vibrate
   (fn []
+    (println "vibrate")
     (.vibrate Vibration)))
 
 ;; -- Handlers --------------------------------------------------------------
@@ -39,20 +45,22 @@
 (re/reg-event-fx ::initialize-db
   validate-spec
   (fn [_ _]
-    {:db (app-db)
-     ::timer-tick nil}))
+    (let [{:keys [start-time] :as db} (app-db)]
+      {:db db
+       ::timer-tick start-time})))
 
 (re/reg-event-fx ::tick
   validate-spec
   (fn [{:keys [db]}]
-    (let [{:keys [current-time start-time]} db
+    (let [{:keys [start-time]} db
+          current-time (js/Date.)
           diff (js/Math.round (/ (- (.getTime current-time) (.getTime start-time)) 1000))
           should-continue? (and (not (get db :stop false)) (< diff 120))
           should-vibrate? (and (zero? (mod diff 30)) (> diff 0))]
       (merge
-        {:db (assoc db :current-time (js/Date.))}
+        {:db (assoc db :current-time current-time)}
         (when should-vibrate?  {::vibrate nil})
-        (when should-continue? {::timer-tick nil})))))
+        (when should-continue? {::timer-tick start-time})))))
 
 (re/reg-event-db ::stop
   (fn [db]
